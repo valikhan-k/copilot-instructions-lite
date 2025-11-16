@@ -60,23 +60,23 @@ Isolate business logic from infrastructure concerns. Core business rules should 
 
 **Dependency Inversion Principle** — High-level modules should not depend on low-level modules. Both depend on abstractions.
 
-**Dependency flow:**
+**Dependency flow (Hexagonal Architecture):**
 - Domain layer → no external dependencies (pure business logic)
-- Application layer → depends on domain, defines abstractions (interfaces/ports)
-- Infrastructure → implements application abstractions (adapters)
-- API/Presentation → orchestrates, composes dependencies (Composition Root)
+- Application layer → depends on domain (orchestrates use cases)
+- Infrastructure → depends on application (implements application abstractions)
+- API/Presentation → depends on application (exposes functionality), can reference all layers for DI configuration (composition root)
 
 **Composition Root** — Wire up dependencies in one place at application entry point. Keep DI configuration centralized, close to `Main`.
 
 ### Structural Evolution
-Let project structure emerge from evidence, not prediction:
+Let project structure emerge from evidence, not prediction. Keep tests in separate test project.
 
-**Default to single .csproj** unless you have concrete reasons to separate:
+**Start with single .csproj** for application initially when:
 - Exploring or prototyping
 - Total scope fits comfortably in one project
 - Boundaries are still fluid
 
-**Start with multiple .csproj when you know:**
+**Start with or move to multiple .csproj when:**
 - End architecture is predictable from requirements or past experience
 - Early separation helps contributors understand the vision (prevents broken windows)
 - Clear deployment, team, or domain boundaries exist today
@@ -91,6 +91,7 @@ Stay ahead of complexity without over-engineering for imagined futures.
 Choose organization based on what's hardest to navigate, not rigid rules:
 
 **Start with layer folders** (e.g., `/Api`, `/Application`, `/Domain`, `/Infrastructure`):
+- Tests in a separate project (e.g., `/UnitTests`, `/IntegrationTests`)
 - Simple mental model for most projects
 - Move away when you find yourself jumping between layers constantly
 
@@ -105,10 +106,10 @@ Choose organization based on what's hardest to navigate, not rigid rules:
 - Creates natural seams for future extraction (strangler pattern to microservices)
 - Choose when slice isolation provides real value, not theoretical modularity
 
-These are examples, not mandates. Let navigation pain and team mental models guide structure. VSA can work beautifully in small projects and provides clean boundaries when it's time to distribute.
+**Most importantly:** These are examples, not mandates. Let navigation pain and team mental models guide structure. VSA can work beautifully in small projects and provides clean boundaries when it's time to distribute.
 
 ### API Design
-- Keep endpoints/controllers thin — delegate to services for orchestration
+- Keep presentation layer thin — delegate to application layer for orchestration and use case logic
 - Co-locate related code (endpoint, DTOs, validators) — feature cohesion over layer cohesion
 - Use dependency injection for services and configuration
 - **Humble Object pattern** — Keep infrastructure adapters simple, push logic into testable domain/application layers
