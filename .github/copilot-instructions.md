@@ -16,11 +16,8 @@
 
 ## Security (Non-Negotiable)
 
-- **Never hardcode secrets** — Use configuration providers (User Secrets, environment variables, key vaults)
 - **Validate all external input** — HTTP requests, file uploads, message payloads
 - **Use parameterized queries** — Never concatenate user input into SQL
-- **Don't log sensitive data** — No passwords, tokens, PII, or connection strings in logs
-- **Authenticate and authorize early** — Validate identity and permissions before processing
 
 ---
 
@@ -28,7 +25,6 @@
 
 ### Naming & Clarity
 - Use intention-revealing names that communicate purpose
-- Avoid abbreviations unless universally understood
 - Be specific, not generic (`GetOrderById` > `Get`)
 
 ### Modern C# Features
@@ -42,77 +38,72 @@
 - Keep methods focused and comprehensible (under 50 lines or below cyclomatic complexity of 10 as guideline)
 - Reduce nesting (max 3 levels); use early returns and guard clauses
 - Prefer pure functions when possible (no side effects) — easier to test and reason about
-- **Command-Query Separation** — If feasible, methods should either do something (command) or return something (query), not both. But, stay pragmatic and prefer empirical cleanliness.
 - Avoid temporal coupling — don't require methods to be called in specific order
-
-### Error Handling
-- **Use Result pattern for expected failures** — Validation, business rule violations (make failure explicit in return type)
-- **Reserve exceptions for unexpected errors** — Programming errors, infrastructure failures, exceptional circumstances
-- Don't expose internal implementation details in error messages
-- Consider functional error handling patterns (Railway Oriented Programming) for composable operations
 
 ---
 
 ## Architecture Guidance
 
-### Separation of Concerns & Dependency Management
-Isolate business logic from infrastructure concerns. Core business rules should have minimal dependencies. This is **Ports and Adapters (Hexagonal Architecture)** — domain at center, infrastructure at edges.
+Consider following layered architecture with clear separation of concerns:
 
-**Dependency Inversion Principle** — High-level modules should not depend on low-level modules. Both depend on abstractions.
+- The solution must be organized into four main layers:
+  - **Domain layer** - core business logic
+  - **Application layer** - (use cases, services, commands, queries, interfaces for external services)
+  - **Infrastructure layer** - (implementations for external services, database access, third-party integrations)
+  - **Api layer** - (controllers, API endpoints, minimal API, request/response models)
+  - Each layer should be either in seprate folders or separate projects depending on complexity.
+- Tests must be in separate projects:
+  - `tests/[Solution].UnitTests` (for Domain and Application)
+  - `tests/[Solution].IntegrationTests` (for Infrastructure, Api)
 
-**Dependency flow (Hexagonal Architecture):**
-- Domain layer → no external dependencies (pure business logic)
-- Application layer → depends on domain (orchestrates use cases)
-- Infrastructure → depends on application (implements application abstractions)
-- API/Presentation → depends on application (exposes functionality), can reference all layers for DI configuration (composition root)
+### Dependencies Between Layers
 
-**Composition Root** — Wire up dependencies in one place at application entry point. Keep DI configuration centralized, close to `Main`.
+- **Domain**: has no dependencies.
+- **Application**: depends only on **Domain**.
+- **Infrastructure**: depends on **Application** and **Domain**.
+- **Api**: depends on **Application**. (But can reference anything it needs to bootstrap Composition Root)
 
-### Structural Evolution
-Let project structure emerge from evidence, not prediction. Keep tests in separate test project.
+### Folder and File Structure
 
-**Start with single .csproj** for application initially when:
-- Exploring or prototyping
-- Total scope fits comfortably in one project
-- Boundaries are still fluid
+- Use a **feature-oriented** folder structure in each layer (e.g., `Order/`, `Customer/`).
+- Do **not** use technical names for top-level folders (Controllers, Repositories, etc.).
 
-**Start with or move to multiple .csproj when:**
-- End architecture is predictable from requirements or past experience
-- Early separation helps contributors understand the vision (prevents broken windows)
-- Clear deployment, team, or domain boundaries exist today
+### Evolutionary Architecture
 
-**Evolve the structure** as the codebase reveals its true shape. Balance two risks:
-- Creating structure before understanding (premature boundaries)
-- Deferring structure past the point of clarity (accumulated debt)
+**Start simple, evolve when needed.** Premature architectural complexity is waste—you're solving problems you don't have yet. Begin with Stage 1 and let actual pain points (not imagined future ones) drive evolution. Each stage introduces overhead: more projects mean more ceremony, vertical slices add coordination complexity, microservices multiply operational challenges. Move to the next stage only when the current structure actively hinders your work. Architecture should emerge from real constraints, not anticipated scale. YAGNI applies to structure as much as code—the best architecture for tomorrow is the simplest one that works today.
 
-Stay ahead of complexity without over-engineering for imagined futures.
+#### Stage 1: Single Project with Folder-Based Layers
+- All layers (Domain, Application, Infrastructure, Api) as folders within one `.csproj`
+- Boundaries manifested through folder structure only
+- Use for: new projects, MVPs, small microservices
 
-#### Organization Patterns
-Choose organization based on what's hardest to navigate, not rigid rules:
+#### Stage 2: Multi-Project Layer Separation
+- Extract each layer into separate `.csproj` files
+- Compiler-enforced layer dependencies
+- Features remain as folders within each layer project
+- Use when: enforcing architectural boundaries becomes important
 
-**Start with layer folders** (e.g., `/Api`, `/Application`, `/Domain`, `/Infrastructure`):
-- Tests in a separate project (e.g., `/UnitTests`, `/IntegrationTests`)
-- Simple mental model for most projects
-- Move away when you find yourself jumping between layers constantly
+#### Stage 3: Modular Monolith (Vertical Slices)
+- Features become top-level organizational unit (swap places with layers)
+- Each feature contains all layers (as folders or projects depending on size)
+- Extract shared infrastructure into `Lib/Shared/Common` project
+- Features are bounded contexts, communicate through contracts
+- Use when: distinct business domains, independent feature evolution needed
 
-**Add feature-based grouping** when layers get crowded:
-- Group related files by feature (e.g., `/Orders` contains order-related files)
-- Or nest within layers (e.g., `/Application/Orders`, `/Application/Customers`)
-- Use when "where does this belong?" has obvious feature-based answers
+#### Stage 4: Microservices (Strangler Pattern)
+- Extract features/modules into separate deployable services
+- Each service can use Stage 1 or Stage 2 structure internally
+- Gradually migrate using strangler pattern: extract → deploy alongside → route traffic → remove from monolith
+- Use when: independent deployment and scaling required
 
-**Vertical slice architecture** when features benefit from independence:
-- Self-contained slices own their full stack (applicable at any scale)
-- Different features change at different rates or by different teams
-- Creates natural seams for future extraction (strangler pattern to microservices)
-- Choose when slice isolation provides real value, not theoretical modularity
+**Note**: Stages 1-2 are also appropriate for microservices from the start if service scope is clear.
 
-**Most importantly:** These are examples, not mandates. Let navigation pain and team mental models guide structure. VSA can work beautifully in small projects and provides clean boundaries when it's time to distribute.
+---
 
-### API Design
+## API Layer Design
 - Keep presentation layer thin — delegate to application layer for orchestration and use case logic
-- Co-locate related code (endpoint, DTOs, validators) — feature cohesion over layer cohesion
+- Co-locate related code (Controller or endpoint, DTOs, validators) — feature cohesion over layer cohesion
 - Use dependency injection for services and configuration
-- **Humble Object pattern** — Keep infrastructure adapters simple, push logic into testable domain/application layers
 
 ---
 
@@ -124,7 +115,7 @@ Choose organization based on what's hardest to navigate, not rigid rules:
 
 **Outside-in testing:**
 - Start with integration tests (API endpoints → database) — broad coverage, coarse-grained assertions
-- Add unit tests for complex domain logic — narrow scope, fine-grained assertions
+- Add unit tests for application and domain logic — narrow scope, fine-grained assertions
 - **Mock only out-of-process dependencies** (HTTP APIs, message brokers, file systems) — things that cross process boundaries
 - Use real collaborators for in-process dependencies — avoid mocking domain objects or application services
 
@@ -237,22 +228,3 @@ This guide takes precedence for architectural philosophy and design principles. 
 - **Command-Query Separation** — Methods do or return, not both
 - **Tell, Don't Ask** — Objects should make decisions based on their own state
 - **Postel's Law** — Be conservative in what you send, liberal in what you accept
-
----
-
-## Influences & Further Learning
-
-These principles draw from:
-- **Mark Seemann** — "Dependency Injection Principles, Practices, and Patterns", "Code That Fits in Your Head"
-- **Vladimir Khorikov** — "Unit Testing Principles, Practices, and Patterns"
-- **Martin Fowler** — "Refactoring", evolutionary design
-- **Kent Beck** — Test-Driven Development, simple design
-- **Robert C. Martin** — SOLID principles, Clean Code/Architecture
-- **Scott Wlaschin** — Functional domain modeling, Railway Oriented Programming
-
-**Recommended reading:**
-- "Code That Fits in Your Head" by Mark Seemann
-- "Unit Testing Principles, Practices, and Patterns" by Vladimir Khorikov  
-- "Dependency Injection Principles, Practices, and Patterns" by Mark Seemann & Steven van Deursen
-- "Domain Modeling Made Functional" by Scott Wlaschin
-
