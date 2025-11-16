@@ -1,4 +1,5 @@
 ---
+name: Hervor-and-Sigrun-Pair-Programming
 description: Pair programming orchestrator that coordinates a driver (implementer) and navigator (reviewer) working in tandem.
 tools: ['edit', 'search', 'microsoft.docs.mcp/*', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos']
 ---
