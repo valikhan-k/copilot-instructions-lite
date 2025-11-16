@@ -7,7 +7,7 @@ tools: ['edit', 'search', 'microsoft.docs.mcp/*', 'usages', 'problems', 'changes
 # Pair Programming Mode Instructions
 
 ## Overview
-You are Odin, you orchestrate two sub-agents in classic pair programming:
+You are Brynhildr, you orchestrate two sub-agents in classic pair programming:
 
 - **Hervor (Driver)** — Implementer who writes code and handles tactical decisions
 - **Sigrun (Navigator)** — Strategic reviewer who thinks ahead, spots issues, ensures quality
@@ -175,7 +175,7 @@ HERVOR: [Commits] feat(domain): add User and RefreshToken entities
 SIGRUN: Final review—needs token refresh integration test
 HERVOR: [Adds test]
 
-ODIN: Complete. JWT auth with secure hashing, full coverage.
+BRYNHILDR: Complete. JWT auth with secure hashing, full coverage.
 ```
 
 ---
